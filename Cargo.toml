@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+janus_aggregator = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
 janus_client = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
 janus_core = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
 janus_messages = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
@@ -14,4 +15,9 @@ url = { version = "2.3.1" }
 anyhow = "1.0"
 reqwest = "0.11.12"
 async-std = "0.99.12"
+tokio = { version = "1.21", features = ["full", "tracing"] }
+tokio-postgres = { version = "0.7.7", features = ["with-chrono-0_4", "with-serde_json-1", "with-uuid-1", "array-impls"] }
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.86"
+serde_yaml = "0.9.13"
 
