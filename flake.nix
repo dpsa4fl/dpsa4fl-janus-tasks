@@ -18,11 +18,11 @@
         pname =
           "dpsa4fl-janus-tasks"; # make this what ever your cargo.toml package.name is
         version = "0.1.0";
-        src = ./dpsa4fl-janus-tasks; # the folder with the cargo.toml
-        cargoLock.lockFile = ./dpsa4fl-janus-tasks/Cargo.lock;
-        cargoLock.outputHashes = {
-          "janus_aggregator-0.2.0" = "sha256-+mj6QwjfpAR92+0UoLJnnZGhKS4W66gELBNEHs86P/M=";
-        };
+        src = ./.; # the folder with the cargo.toml
+        cargoLock.lockFile = ./Cargo.lock;
+        cargoLock.outputHashes = {};
+        #   "janus_aggregator-0.2.0" = "sha256-+mj6QwjfpAR92+0UoLJnnZGhKS4W66gELBNEHs86P/M=";
+        # };
         cargoBuildFlags = ""; #"-p janus_aggregator";
         nativeBuildInputs = [ pkgs.pkg-config ];
         buildInputs = [

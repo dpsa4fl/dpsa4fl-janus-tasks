@@ -11,10 +11,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-janus_aggregator = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
-janus_client = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
-janus_core = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
-janus_messages = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
+# janus_aggregator = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
+# janus_client = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
+# janus_core = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
+# janus_messages = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
+# janus_aggregator = { version = "0.2.0" }
+janus_core = { version = "0.1.24" }
 prio = { version = "0.10.0", features = ["multithreaded"] }
 url = { version = "2.3.1" }
 anyhow = "1.0"
