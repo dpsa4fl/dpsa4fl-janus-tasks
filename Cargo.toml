@@ -17,11 +17,11 @@ edition = "2021"
 # janus_messages = { git = "https://github.com/dpsa-project/janus.git", branch = "fixedvec" }
 # janus_aggregator = { version = "0.2.0" }
 
-janus_core = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m4-release", features = ["fpvec_bounded_l2"] }
-janus_client = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m4-release", features = []}
-janus_messages = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m4-release", features = [] }
-janus_aggregator = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m4-release", features = ["fpvec_bounded_l2"] }
-janus_collector = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m4-release", features = ["fpvec_bounded_l2"] }
+janus_core = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m6-dev", features = ["fpvec_bounded_l2"] }
+janus_client = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m6-dev", features = []}
+janus_messages = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m6-dev", features = [] }
+janus_aggregator = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m6-dev", features = ["fpvec_bounded_l2"] }
+janus_collector = { git = "https://github.com/dpsa-project/janus.git", branch = "dpsa-m6-dev", features = ["fpvec_bounded_l2"] }
 
 prio = {git = "https://github.com/dpsa-project/libprio-rs.git", branch ="feature-simple-dp", features = ["multithreaded"]}
 

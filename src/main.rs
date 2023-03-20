@@ -49,7 +49,6 @@ pub mod janus_tasks_client;
 //     provision_tasks(&datastore, tasks).await
 // }
 
-
 // async fn provision_tasks<C: Clock>(datastore: &Datastore<C>, tasks: Vec<Task>) -> Result<()> {
 //     // Read tasks file.
 //     // info!("Reading tasks file");
@@ -85,10 +84,17 @@ pub mod janus_tasks_client;
 //         .context("couldn't write tasks")
 // }
 
-
 use std::{
     net::SocketAddr,
     time::{Instant, UNIX_EPOCH},
+};
+
+use crate::{
+    core::{
+        CreateTrainingSessionRequest, CreateTrainingSessionResponse, HpkeConfigRegistry,
+        StartRoundRequest, StartRoundResponse, TrainingSessionId,
+    },
+    janus_tasks_client::TIME_PRECISION,
 };
 
 use anyhow::{anyhow, Context, Error, Result};
@@ -99,13 +105,6 @@ use janus_aggregator::{
     binary_utils::{janus_main, setup_signal_handler, BinaryOptions, CommonBinaryOptions},
     config::{BinaryConfig, CommonConfig},
     datastore::{self, Datastore},
-    dpsa4fl::{
-        core::{
-            CreateTrainingSessionRequest, CreateTrainingSessionResponse, HpkeConfigRegistry,
-            StartRoundRequest, StartRoundResponse, TrainingSessionId,
-        },
-        janus_tasks_client::TIME_PRECISION,
-    },
     task::{QueryType, Task},
     SecretBytes,
 };
@@ -117,7 +116,6 @@ use janus_core::{
 use janus_messages::{Duration, HpkeConfig, Role, TaskId, Time};
 use opentelemetry::metrics::{Histogram, Meter, Unit};
 use prio::codec::Decode;
-use prio::flp::types::fixedpoint_l2::NoiseParameterType;
 use rand::random;
 use serde_json::json;
 
@@ -247,21 +245,27 @@ pub fn taskprovision_filter<C: Clock>(
         // .and(warp::query::<HashMap<String, String>>())
         .and(warp::body::json())
         .then(
-            |aggregator: Arc<TaskProvisioner<C>>, request: CreateTrainingSessionRequest| async move {
+            |aggregator: Arc<TaskProvisioner<C>>,
+             request: CreateTrainingSessionRequest<janus_tasks_client::Fx>| async move {
                 let result = aggregator.handle_create_session(request).await;
-                match result
-                {
-                    Ok(training_session_id) =>
-                    {
-                        let response = CreateTrainingSessionResponse { training_session_id };
-                        let response = warp::reply::with_status(warp::reply::json(&response), StatusCode::OK).into_response();
+                match result {
+                    Ok(training_session_id) => {
+                        let response = CreateTrainingSessionResponse {
+                            training_session_id,
+                        };
+                        let response =
+                            warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
+                                .into_response();
                         Ok(response)
-                    },
-                    Err(err) =>
-                    {
-                        let response = warp::reply::with_status(warp::reply::json(&err.to_string()), StatusCode::BAD_REQUEST).into_response();
+                    }
+                    Err(err) => {
+                        let response = warp::reply::with_status(
+                            warp::reply::json(&err.to_string()),
+                            StatusCode::BAD_REQUEST,
+                        )
+                        .into_response();
                         Ok(response)
-                    },
+                    }
                 }
             },
         );
@@ -400,7 +404,7 @@ struct TrainingSession {
     hpke_config_and_key: HpkeKeypair,
 
     // noise param
-    noise_parameter: NoiseParameterType,
+    noise_parameter: janus_tasks_client::Fx,
 }
 
 pub struct TaskProvisioner<C: Clock> {
@@ -502,7 +506,7 @@ impl<C: Clock> TaskProvisioner<C> {
 
     async fn handle_create_session(
         &self,
-        request: CreateTrainingSessionRequest,
+        request: CreateTrainingSessionRequest<janus_tasks_client::Fx>,
     ) -> Result<TrainingSessionId> {
         // decode fields
         let CreateTrainingSessionRequest {
@@ -804,4 +808,3 @@ fn build_problem_details_response(error_type: String, task_id: Option<TaskId>) -
     )
     .into_response()
 }
-
