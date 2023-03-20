@@ -4,7 +4,7 @@ rust-version = "1.64.0"
 version = "0.1.0"
 
 [package]
-name = "dpsa4fl-janus-tasks"
+name = "dpsa4fl_janus_tasks"
 version = "0.1.0"
 edition = "2021"
 
