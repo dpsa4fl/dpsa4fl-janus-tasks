@@ -136,6 +136,7 @@ pub struct CreateTrainingSessionRequest<Fx: Fixed> {
 
     // noise params
     #[serde(deserialize_with = "Fx::deserialize")]
+    #[serde(serialize_with = "Fx::serialize")]
     pub noise_parameter: Fx,
 }
 
