@@ -59,3 +59,6 @@ tracing-subscriber = { version = "0.3", features = ["std", "env-filter", "fmt", 
 clap = { version = "4.1.6", features = ["derive", "env"] }
 base64 = "0.21.0"
 fixed = { version = "1.23" }
+
+[lib]
+crate-type = ["lib"] 
