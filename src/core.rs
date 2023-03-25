@@ -10,6 +10,7 @@ use prio::codec::{CodecError, Decode, Encode};
 use rand::random;
 use serde::{Deserialize, Serialize};
 use url::Url;
+use crate::fixed::FixedAny;
 
 /////////////////////////////
 // Locations
@@ -113,7 +114,7 @@ impl HpkeConfigRegistry {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateTrainingSessionRequest<Fx: Fixed> {
+pub struct CreateTrainingSessionRequest {
     // id if known
     pub training_session_id: Option<TrainingSessionId>,
 
@@ -135,8 +136,9 @@ pub struct CreateTrainingSessionRequest<Fx: Fixed> {
     pub leader_auth_token_encoded: String,    // in unpadded base64url
 
     // noise params
-    #[serde(deserialize_with = "Fx::deserialize")]
-    pub noise_parameter: Fx,
+    // NOTE: Unintuitively, this also decides the submission type
+    // #[serde(deserialize_with = "Fx::deserialize")]
+    pub noise_parameter: FixedAny,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

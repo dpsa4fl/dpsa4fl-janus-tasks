@@ -15,7 +15,11 @@
 //     println!("Hello, world!");
 // }
 
+#[macro_use]
+extern crate downcast_rs;
+
 pub mod core;
+pub mod fixed;
 pub mod janus_tasks_client;
 
 // async fn provision_new_task(
@@ -99,6 +103,7 @@ use crate::{
 
 use anyhow::{anyhow, Context, Error, Result};
 use base64::{engine::general_purpose, Engine};
+use crate::fixed::FixedAny;
 // use base64::URL_SAFE_NO_PAD;
 use http::{HeaderMap, StatusCode};
 use janus_aggregator::{
@@ -246,7 +251,7 @@ pub fn taskprovision_filter<C: Clock>(
         .and(warp::body::json())
         .then(
             |aggregator: Arc<TaskProvisioner<C>>,
-             request: CreateTrainingSessionRequest<janus_tasks_client::Fx>| async move {
+             request: CreateTrainingSessionRequest| async move {
                 let result = aggregator.handle_create_session(request).await;
                 match result {
                     Ok(training_session_id) => {
@@ -404,7 +409,7 @@ struct TrainingSession {
     hpke_config_and_key: HpkeKeypair,
 
     // noise param
-    noise_parameter: janus_tasks_client::Fx,
+    noise_parameter: FixedAny,
 }
 
 pub struct TaskProvisioner<C: Clock> {
@@ -473,6 +478,23 @@ impl<C: Clock> TaskProvisioner<C> {
             Vec::new()
         };
 
+        // choose vdafinstance
+        let vdafinst = match training_session.noise_parameter {
+            FixedAny::Fixed16(noise) => VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum {
+                length: training_session.num_gradient_entries,
+                noise_param: noise
+            },
+            FixedAny::Fixed32(noise) => VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum {
+                length: training_session.num_gradient_entries,
+                noise_param: noise
+            },
+            FixedAny::Fixed64(noise) => VdafInstance::Prio3Aes128FixedPoint64BitBoundedL2VecSum {
+                length: training_session.num_gradient_entries,
+                noise_param: noise
+            },
+        };
+
+        // create the task
         let task = Task::new(
             task_id,
             vec![
@@ -480,11 +502,7 @@ impl<C: Clock> TaskProvisioner<C> {
                 training_session.helper_endpoint.clone(),
             ],
             QueryType::TimeInterval,
-            // QueryType::FixedSize { max_batch_size: u64::MAX },
-            VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum {
-                length: training_session.num_gradient_entries,
-                noise_param: training_session.noise_parameter,
-            },
+            vdafinst,
             training_session.role,
             vec![training_session.verify_key.clone()],
             10,                                       // max_batch_query_count
@@ -506,7 +524,7 @@ impl<C: Clock> TaskProvisioner<C> {
 
     async fn handle_create_session(
         &self,
-        request: CreateTrainingSessionRequest<janus_tasks_client::Fx>,
+        request: CreateTrainingSessionRequest,
     ) -> Result<TrainingSessionId> {
         // decode fields
         let CreateTrainingSessionRequest {

@@ -20,6 +20,8 @@ use rand::random;
 
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
 
+use crate::fixed::FixedAny;
+
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,
     TrainingSessionId,
@@ -37,11 +39,11 @@ pub struct JanusTasksClient {
     // hpke_private_key: HpkePrivateKey,
     leader_auth_token: AuthenticationToken,
     collector_auth_token: AuthenticationToken,
-    noise_parameter: Fx,
+    noise_parameter: FixedAny,
 }
 
 impl JanusTasksClient {
-    pub fn new(location: Locations, num_gradient_entries: usize, noise_parameter: Fx) -> Self {
+    pub fn new(location: Locations, num_gradient_entries: usize, noise_parameter: FixedAny) -> Self {
         let leader_auth_token = rand::random::<[u8; 16]>().to_vec().into();
         let collector_auth_token = rand::random::<[u8; 16]>().to_vec().into();
 
@@ -87,7 +89,7 @@ impl JanusTasksClient {
             collector_hpke_config: self.hpke_keypair.config().clone(),
             collector_auth_token_encoded: collector_auth_token_encoded.clone(),
             leader_auth_token_encoded: leader_auth_token_encoded.clone(),
-            noise_parameter: self.noise_parameter,
+            noise_parameter: self.noise_parameter.clone(),
         };
 
         // send request to leader first
