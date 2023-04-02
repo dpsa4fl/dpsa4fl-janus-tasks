@@ -139,6 +139,8 @@ pub struct CreateTrainingSessionRequest {
     // NOTE: Unintuitively, this also decides the submission type
     // #[serde(deserialize_with = "Fx::deserialize")]
     pub noise_parameter: FixedAny,
+    // #[serde(deserialize_with = "Fx::deserialize")]
+    // #[serde(serialize_with = "Fx::serialize")]
 }
 
 #[derive(Debug, Serialize, Deserialize)]
