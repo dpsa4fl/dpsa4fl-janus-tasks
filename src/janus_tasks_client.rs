@@ -19,8 +19,9 @@ use prio::{codec::Encode, vdaf::prio3::Prio3Aes128FixedPointBoundedL2VecSum};
 use rand::random;
 
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
+use reqwest::Url;
 
-use crate::{fixed::FixedAny, core::VdafParameter};
+use crate::{fixed::FixedAny, core::{VdafParameter, GetVdafParameterRequest, GetVdafParameterResponse}};
 
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,
@@ -241,3 +242,31 @@ impl JanusTasksClient {
         Ok(result)
     }
 }
+
+
+//////////////////////////////////////////////////////
+// client functionality for dpas4fl clients
+
+pub async fn get_vdaf_parameter_from_task(tasks_server: Url, task_id: TaskId) -> Result<VdafParameter>
+{
+    // TODO encode task id and make request
+    let task_id_encoded = general_purpose::URL_SAFE_NO_PAD.encode(&task_id.get_encoded());
+
+    let request = GetVdafParameterRequest { task_id_encoded };
+
+    let response = reqwest::Client::new()
+        .post(
+                tasks_server
+                .join("/get_vdaf_parameter")
+                .unwrap(),
+        )
+        .json(&request)
+        .send()
+        .await?;
+
+    response.json().await.map_err(|e| anyhow!("got err: {e}"))
+}
+
+
+
+
