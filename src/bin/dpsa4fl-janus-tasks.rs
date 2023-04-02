@@ -7,7 +7,7 @@ use std::{
 use dpsa4fl_janus_tasks::{
     core::{
         CreateTrainingSessionRequest, CreateTrainingSessionResponse, HpkeConfigRegistry,
-        StartRoundRequest, StartRoundResponse, TrainingSessionId,
+        StartRoundRequest, StartRoundResponse, TrainingSessionId, VdafParameter, GetVdafParameterRequest, GetVdafParameterResponse,
     },
     janus_tasks_client::{Fx, TIME_PRECISION},
 };
@@ -240,8 +240,51 @@ pub fn taskprovision_filter<C: Clock>(
         "start_round",
     );
 
+    //-------------------------------------------------------
+    // get vdaf parameter
+    let get_vdaf_parameter_routing = warp::path("get_vdaf_parameter");
+    let get_vdaf_parameter_responding = warp::post()
+        .and(with_cloned_value(Arc::clone(&aggregator)))
+        // .and(warp::query::<HashMap<String, String>>())
+        .and(warp::body::json())
+        .then(
+            |aggregator: Arc<TaskProvisioner<C>>, request: GetVdafParameterRequest| async move {
+                let result = aggregator.handle_get_vdaf_parameter(request).await;
+                match result {
+                    Ok(vdaf_parameter) => {
+                        let response = GetVdafParameterResponse {vdaf_parameter};
+                        let response =
+                            warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
+                                .into_response();
+                        Ok(response)
+                    }
+                    Err(err) => {
+                        let response = warp::reply::with_status(
+                            warp::reply::json(&err.to_string()),
+                            StatusCode::BAD_REQUEST,
+                        )
+                        .into_response();
+                        Ok(response)
+                    }
+                }
+            },
+        );
+    let get_vdaf_parameter_endpoint = compose_common_wrappers(
+        get_vdaf_parameter_routing,
+        get_vdaf_parameter_responding,
+        warp::cors()
+            .allow_any_origin()
+            .allow_method("POST")
+            .max_age(CORS_PREFLIGHT_CACHE_AGE)
+            .build(),
+        response_time_histogram.clone(),
+        "get_vdaf_parameter",
+    );
+
+
     Ok(start_round_endpoint
         .or(create_session_endpoint)
+        .or(get_vdaf_parameter_endpoint)
         // .or(upload_endpoint)
         // .or(aggregate_endpoint)
         // .or(collect_endpoint)
@@ -318,7 +361,6 @@ struct TrainingSession {
 
     //
     role: Role,
-    num_gradient_entries: usize,
 
     // needs to be the same for both aggregators (section 4.2 of ppm-draft)
     verify_key: SecretBytes,
@@ -332,8 +374,11 @@ struct TrainingSession {
     // my hpke config & key
     hpke_config_and_key: HpkeKeypair,
 
-    // noise param
-    noise_parameter: FixedAny,
+    // vdaf param
+    vdaf_parameter: VdafParameter,
+
+    // my tasks, most recent one is at the end
+    tasks: Vec<TaskId>
 }
 
 pub struct TaskProvisioner<C: Clock> {
@@ -344,7 +389,7 @@ pub struct TaskProvisioner<C: Clock> {
     // Cache of task aggregators.
     // task_aggregators: Mutex<HashMap<TaskId, Arc<TaskAggregator>>>,
     /// Currently active training runs.
-    training_sessions: Mutex<HashMap<TrainingSessionId, Arc<TrainingSession>>>,
+    training_sessions: Mutex<HashMap<TrainingSessionId, TrainingSession>>,
 
     /// static config
     config: TaskProvisionerConfig,
@@ -378,23 +423,19 @@ impl<C: Clock> TaskProvisioner<C> {
     async fn handle_start_round(&self, request: StartRoundRequest) -> Result<(), Error> {
         //---------------------- decode parameters --------------------------
         // session id
-        // let training_session_id = training_session_id.ok_or(anyhow!("training_session_id parameter not given."))?;
-        let training_session_id = request.training_session_id; // TrainingSessionId::get_decoded(&request.training_session_id)?;
+        let training_session_id = request.training_session_id; 
 
         // get training session with this id
-        let training_sessions_lock = self.training_sessions.lock().await;
-        let training_session = training_sessions_lock
-            .get(&training_session_id)
+        let mut training_sessions_lock = self.training_sessions.lock().await;
+        let mut training_session = training_sessions_lock
+            .get_mut(&training_session_id)
             .ok_or(anyhow!(
                 "There is no training session with id {}",
                 &training_session_id
             ))?;
 
         // task id
-        // let task_id_base64 = task_id_base64.ok_or(anyhow!("task_id parameter not given"))?;
-
         let task_id_bytes = general_purpose::URL_SAFE_NO_PAD.decode(request.task_id_encoded)?;
-        // base64::decode_config(request.task_id_encoded, base64::URL_SAFE_NO_PAD)?;
         let task_id = TaskId::get_decoded(&task_id_bytes)?;
 
         // -------------------- create new task -----------------------------
@@ -407,17 +448,17 @@ impl<C: Clock> TaskProvisioner<C> {
         };
 
         // choose vdafinstance
-        let vdafinst = match training_session.noise_parameter {
+        let vdafinst = match training_session.vdaf_parameter.noise_parameter {
             FixedAny::Fixed16(noise) => VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum {
-                length: training_session.num_gradient_entries,
+                length: training_session.vdaf_parameter.gradient_len,
                 noise_param: noise
             },
             FixedAny::Fixed32(noise) => VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum {
-                length: training_session.num_gradient_entries,
+                length: training_session.vdaf_parameter.gradient_len,
                 noise_param: noise
             },
             FixedAny::Fixed64(noise) => VdafInstance::Prio3Aes128FixedPoint64BitBoundedL2VecSum {
-                length: training_session.num_gradient_entries,
+                length: training_session.vdaf_parameter.gradient_len,
                 noise_param: noise
             },
         };
@@ -447,6 +488,10 @@ impl<C: Clock> TaskProvisioner<C> {
 
         println!("provisioning task now with id {}", task_id);
         provision_tasks(&self.datastore, vec![task]).await?;
+
+        // write the task id into the session
+        training_session.tasks.push(task_id);
+
         Ok(())
     }
 
@@ -457,15 +502,12 @@ impl<C: Clock> TaskProvisioner<C> {
         // decode fields
         let CreateTrainingSessionRequest {
             training_session_id,
-            // leader_endpoint,
-            // helper_endpoint,
             role,
-            num_gradient_entries,
             verify_key_encoded,
             collector_hpke_config,
             collector_auth_token_encoded,
             leader_auth_token_encoded,
-            noise_parameter,
+            vdaf_parameter,
         } = request;
 
         // prepare id
@@ -488,7 +530,6 @@ impl<C: Clock> TaskProvisioner<C> {
         let verify_key = SecretBytes::new(
             general_purpose::URL_SAFE_NO_PAD
                 .decode(verify_key_encoded)
-                // base64::decode_config(verify_key_encoded, URL_SAFE_NO_PAD)
                 .context("invalid base64url content in \"verifyKey\"")?,
         );
 
@@ -497,25 +538,43 @@ impl<C: Clock> TaskProvisioner<C> {
 
         // create session
         let training_session = TrainingSession {
-            // leader_endpoint,
-            // helper_endpoint,
             role,
-            num_gradient_entries,
             verify_key,
             collector_hpke_config,
             collector_auth_token,
             leader_auth_token,
             hpke_config_and_key,
-            noise_parameter,
+            vdaf_parameter,
+            tasks: vec![],
         };
 
         // insert into list
         println!("creating training session with id {}", training_session_id);
         let mut sessions = self.training_sessions.lock().await;
-        sessions.insert(training_session_id, Arc::new(training_session));
+        sessions.insert(training_session_id, training_session);
 
         // respond with id
         Ok(training_session_id)
+    }
+
+    async fn handle_get_vdaf_parameter(&self, request: GetVdafParameterRequest) -> Result<VdafParameter, Error>
+    {
+        // task id
+        let task_id_bytes = general_purpose::URL_SAFE_NO_PAD.decode(request.task_id_encoded)?;
+        let task_id = TaskId::get_decoded(&task_id_bytes)?;
+
+        // find training session with this task_id
+        let sessions = self.training_sessions.lock().await;
+        let sessions_with_id: Vec<_> = sessions.values().filter(|v| v.tasks.contains(&task_id)).collect();
+
+        let session_with_id = match sessions_with_id.len()
+        {
+            0 => Err(anyhow!("Could not find session containing task with id {task_id}.")),
+            1 => Ok(sessions_with_id[0]),
+            _ => Err(anyhow!("Multiple sessions containing taskd id {task_id} exist."))
+        }?;
+
+        Ok(session_with_id.vdaf_parameter.clone())
     }
 }
 

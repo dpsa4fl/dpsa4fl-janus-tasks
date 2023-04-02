@@ -20,7 +20,7 @@ use rand::random;
 
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
 
-use crate::fixed::FixedAny;
+use crate::{fixed::FixedAny, core::VdafParameter};
 
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,
@@ -33,17 +33,14 @@ pub const TIME_PRECISION: u64 = 3600;
 pub struct JanusTasksClient {
     http_client: reqwest::Client,
     location: Locations,
-    num_gradient_entries: usize,
     hpke_keypair: HpkeKeypair,
-    // hpke_config: HpkeConfig,
-    // hpke_private_key: HpkePrivateKey,
     leader_auth_token: AuthenticationToken,
     collector_auth_token: AuthenticationToken,
-    noise_parameter: FixedAny,
+    vdaf_parameter: VdafParameter,
 }
 
 impl JanusTasksClient {
-    pub fn new(location: Locations, num_gradient_entries: usize, noise_parameter: FixedAny) -> Self {
+    pub fn new(location: Locations, vdaf_parameter: VdafParameter) -> Self {
         let leader_auth_token = rand::random::<[u8; 16]>().to_vec().into();
         let collector_auth_token = rand::random::<[u8; 16]>().to_vec().into();
 
@@ -59,13 +56,10 @@ impl JanusTasksClient {
         JanusTasksClient {
             http_client: reqwest::Client::new(),
             location,
-            num_gradient_entries,
             hpke_keypair,
-            // hpke_config,
-            // hpke_private_key,
             leader_auth_token,
             collector_auth_token,
-            noise_parameter,
+            vdaf_parameter,
         }
     }
 
@@ -84,12 +78,12 @@ impl JanusTasksClient {
             // leader_endpoint: self.location.internal_leader.clone(),
             // helper_endpoint: self.location.internal_helper.clone(),
             role,
-            num_gradient_entries: self.num_gradient_entries,
+            // num_gradient_entries: self.num_gradient_entries,
             verify_key_encoded: verify_key_encoded.clone(),
             collector_hpke_config: self.hpke_keypair.config().clone(),
             collector_auth_token_encoded: collector_auth_token_encoded.clone(),
             leader_auth_token_encoded: leader_auth_token_encoded.clone(),
-            noise_parameter: self.noise_parameter.clone(),
+            vdaf_parameter: self.vdaf_parameter.clone(),
         };
 
         // send request to leader first
@@ -203,7 +197,7 @@ impl JanusTasksClient {
         let vdaf_collector =
             Prio3Aes128FixedPointBoundedL2VecSum::<Fx>::new_aes128_fixedpoint_boundedl2_vec_sum(
                 2,
-                self.num_gradient_entries,
+                self.vdaf_parameter.gradient_len,
                 Fx::ZERO,
             )?;
 

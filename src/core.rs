@@ -17,8 +17,6 @@ use crate::fixed::FixedAny;
 
 #[derive(Clone)]
 pub struct Locations {
-    // pub internal_leader: Url, // TODO: This internal URL should probably be configured somewhere else, actually
-    // pub internal_helper: Url, // TODO: Same.
     pub external_leader_tasks: Url,
     pub external_helper_tasks: Url,
     pub external_leader_main: Url,
@@ -34,6 +32,21 @@ impl Locations {
         ]
     }
 }
+
+/////////////////////////////
+// VDAF Parametrization
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VdafParameter
+{
+    pub gradient_len: usize,
+
+    // NOTE: This parameter also decides the bitsize of the fixed type of the gradient entries
+    pub noise_parameter: FixedAny,
+
+    // pub submission_type: FixedTypeTag,
+}
+
 
 /////////////////////////////
 // data
@@ -124,7 +137,8 @@ pub struct CreateTrainingSessionRequest {
 
     //
     pub role: Role,
-    pub num_gradient_entries: usize,
+
+    // pub num_gradient_entries: usize,
 
     // needs to be the same for both aggregators (section 4.2 of ppm-draft)
     pub verify_key_encoded: String, // in unpadded base64url
@@ -135,10 +149,13 @@ pub struct CreateTrainingSessionRequest {
     pub collector_auth_token_encoded: String, // in unpadded base64url
     pub leader_auth_token_encoded: String,    // in unpadded base64url
 
+    // vdaf params
+    pub vdaf_parameter: VdafParameter,
+
     // noise params
     // NOTE: Unintuitively, this also decides the submission type
     // #[serde(deserialize_with = "Fx::deserialize")]
-    pub noise_parameter: FixedAny,
+    // pub noise_parameter: FixedAny,
     // #[serde(deserialize_with = "Fx::deserialize")]
     // #[serde(serialize_with = "Fx::serialize")]
 }
@@ -163,3 +180,20 @@ pub struct StartRoundRequest {
 pub struct StartRoundResponse {
     // pub training_session_id: TrainingSessionId
 }
+
+
+//--- get vdaf parameter ---
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetVdafParameterRequest {
+    pub task_id_encoded: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetVdafParameterResponse {
+    pub vdaf_parameter: VdafParameter,
+}
+
+
