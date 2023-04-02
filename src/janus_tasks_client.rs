@@ -69,17 +69,12 @@ impl JanusTasksClient {
             general_purpose::URL_SAFE_NO_PAD.encode(self.leader_auth_token.as_bytes());
         let collector_auth_token_encoded =
             general_purpose::URL_SAFE_NO_PAD.encode(self.collector_auth_token.as_bytes());
-        // base64::encode_config(self.collector_auth_token.as_bytes(), URL_SAFE_NO_PAD);
         let verify_key = rand::random::<[u8; PRIO3_AES128_VERIFY_KEY_LENGTH]>();
         let verify_key_encoded = general_purpose::URL_SAFE_NO_PAD.encode(&verify_key);
-        // base64::encode_config(&verify_key, URL_SAFE_NO_PAD);
 
         let make_request = |role, id| CreateTrainingSessionRequest {
             training_session_id: id,
-            // leader_endpoint: self.location.internal_leader.clone(),
-            // helper_endpoint: self.location.internal_helper.clone(),
             role,
-            // num_gradient_entries: self.num_gradient_entries,
             verify_key_encoded: verify_key_encoded.clone(),
             collector_hpke_config: self.hpke_keypair.config().clone(),
             collector_auth_token_encoded: collector_auth_token_encoded.clone(),
@@ -106,7 +101,7 @@ impl JanusTasksClient {
                 response
             }
             res => {
-                return Err(anyhow!("Got error from leaderiiiiiii: {res}"));
+                return Err(anyhow!("Got error from leader: {res}"));
             }
         };
 
