@@ -65,6 +65,7 @@ async fn main() -> anyhow::Result<()> {
         let (_bound_address, server) = taskprovision_server(
             Arc::new(ctx.datastore),
             ctx.clock,
+            ctx.config.task_provisioner_config,
             ctx.config.listen_address,
             HeaderMap::new(),
             // ctx.config
@@ -129,11 +130,12 @@ async fn main() -> anyhow::Result<()> {
 pub fn taskprovision_server<C: Clock>(
     datastore: Arc<Datastore<C>>,
     clock: C,
+    config: TaskProvisionerConfig,
     listen_address: SocketAddr,
     response_headers: HeaderMap,
     shutdown_signal: impl Future<Output = ()> + Send + 'static,
 ) -> Result<(SocketAddr, impl Future<Output = ()> + 'static), Error> {
-    let filter = taskprovision_filter(datastore, clock)?;
+    let filter = taskprovision_filter(datastore, clock, config)?;
     let wrapped_filter = filter.with(warp::filters::reply::headers(response_headers));
     let server = warp::serve(wrapped_filter);
     Ok(server.bind_with_graceful_shutdown(listen_address, shutdown_signal))
@@ -142,6 +144,7 @@ pub fn taskprovision_server<C: Clock>(
 pub fn taskprovision_filter<C: Clock>(
     datastore: Arc<Datastore<C>>,
     clock: C,
+    config: TaskProvisionerConfig,
 ) -> Result<BoxedFilter<(impl Reply,)>, Error> {
     let meter = opentelemetry::global::meter("janus_aggregator");
     let response_time_histogram = meter
@@ -150,7 +153,7 @@ pub fn taskprovision_filter<C: Clock>(
         .with_unit(Unit::new("seconds"))
         .init();
 
-    let aggregator = Arc::new(TaskProvisioner::new(datastore, clock, meter));
+    let aggregator = Arc::new(TaskProvisioner::new(datastore, clock, meter, config));
 
     //-------------------------------------------------------
     // create new training session
@@ -282,6 +285,17 @@ struct Config {
     /// API endpoints.
     // TODO(#232): options for terminating TLS, unless that gets handled in a load balancer?
     listen_address: SocketAddr,
+
+    #[serde(flatten)]
+    task_provisioner_config: TaskProvisionerConfig,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskProvisionerConfig
+{
+    // the internal endpoint urls
+    pub leader_endpoint: Url,
+    pub helper_endpoint: Url,
 }
 
 impl BinaryConfig for Config {
@@ -299,8 +313,8 @@ impl BinaryConfig for Config {
 
 struct TrainingSession {
     // endpoints
-    leader_endpoint: Url,
-    helper_endpoint: Url,
+    // leader_endpoint: Url,
+    // helper_endpoint: Url,
 
     //
     role: Role,
@@ -332,12 +346,15 @@ pub struct TaskProvisioner<C: Clock> {
     /// Currently active training runs.
     training_sessions: Mutex<HashMap<TrainingSessionId, Arc<TrainingSession>>>,
 
+    /// static config
+    config: TaskProvisionerConfig,
+
     /// hpke config registry
     keyring: Mutex<HpkeConfigRegistry>,
 }
 
 impl<C: Clock> TaskProvisioner<C> {
-    fn new(datastore: Arc<Datastore<C>>, clock: C, _meter: Meter) -> Self {
+    fn new(datastore: Arc<Datastore<C>>, clock: C, _meter: Meter, config: TaskProvisionerConfig) -> Self {
         // let upload_decrypt_failure_counter = meter
         //     .u64_counter("janus_upload_decrypt_failures")
         //     .with_description("Number of decryption failures in the /upload endpoint.")
@@ -351,6 +368,7 @@ impl<C: Clock> TaskProvisioner<C> {
             clock,
             training_sessions: Mutex::new(HashMap::new()),
             keyring: Mutex::new(HpkeConfigRegistry::new()),
+            config,
             // task_aggregators: Mutex::new(HashMap::new()),
             // upload_decrypt_failure_counter,
             // aggregate_step_failure_counter,
@@ -408,8 +426,8 @@ impl<C: Clock> TaskProvisioner<C> {
         let task = Task::new(
             task_id,
             vec![
-                training_session.leader_endpoint.clone(),
-                training_session.helper_endpoint.clone(),
+                self.config.leader_endpoint.clone(),
+                self.config.helper_endpoint.clone(),
             ],
             QueryType::TimeInterval,
             vdafinst,
@@ -439,8 +457,8 @@ impl<C: Clock> TaskProvisioner<C> {
         // decode fields
         let CreateTrainingSessionRequest {
             training_session_id,
-            leader_endpoint,
-            helper_endpoint,
+            // leader_endpoint,
+            // helper_endpoint,
             role,
             num_gradient_entries,
             verify_key_encoded,
@@ -479,8 +497,8 @@ impl<C: Clock> TaskProvisioner<C> {
 
         // create session
         let training_session = TrainingSession {
-            leader_endpoint,
-            helper_endpoint,
+            // leader_endpoint,
+            // helper_endpoint,
             role,
             num_gradient_entries,
             verify_key,

@@ -17,8 +17,8 @@ use crate::fixed::FixedAny;
 
 #[derive(Clone)]
 pub struct Locations {
-    pub internal_leader: Url, // TODO: This internal URL should probably be configured somewhere else, actually
-    pub internal_helper: Url, // TODO: Same.
+    // pub internal_leader: Url, // TODO: This internal URL should probably be configured somewhere else, actually
+    // pub internal_helper: Url, // TODO: Same.
     pub external_leader_tasks: Url,
     pub external_helper_tasks: Url,
     pub external_leader_main: Url,
@@ -119,8 +119,8 @@ pub struct CreateTrainingSessionRequest {
     pub training_session_id: Option<TrainingSessionId>,
 
     // endpoints
-    pub leader_endpoint: Url,
-    pub helper_endpoint: Url,
+    // pub leader_endpoint: Url,
+    // pub helper_endpoint: Url,
 
     //
     pub role: Role,

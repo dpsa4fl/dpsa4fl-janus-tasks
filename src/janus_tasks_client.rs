@@ -81,8 +81,8 @@ impl JanusTasksClient {
 
         let make_request = |role, id| CreateTrainingSessionRequest {
             training_session_id: id,
-            leader_endpoint: self.location.internal_leader.clone(),
-            helper_endpoint: self.location.internal_helper.clone(),
+            // leader_endpoint: self.location.internal_leader.clone(),
+            // helper_endpoint: self.location.internal_helper.clone(),
             role,
             num_gradient_entries: self.num_gradient_entries,
             verify_key_encoded: verify_key_encoded.clone(),
