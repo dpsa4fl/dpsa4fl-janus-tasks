@@ -259,7 +259,9 @@ pub async fn get_vdaf_parameter_from_task(tasks_server: Url, task_id: TaskId) ->
         .send()
         .await?;
 
-    response.json().await.map_err(|e| anyhow!("got err: {e}"))
+    let param : Result<GetVdafParameterResponse> = response.json().await.map_err(|e| anyhow!("got err: {e}"));
+
+    param.map(|x| x.vdaf_parameter)
 }
 
 
