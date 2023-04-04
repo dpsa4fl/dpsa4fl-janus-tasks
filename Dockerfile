@@ -1,7 +1,7 @@
 FROM rust:1.67.1-alpine as builder
 ARG BINARY=dpsa4fl-janus-tasks
 ARG GIT_REVISION=unknown
-RUN apk add libc-dev protobuf-dev protoc
+RUN apk add libc-dev protobuf-dev protoc git
 WORKDIR /src
 COPY Cargo.toml /src/Cargo.toml
 COPY src /src/src
