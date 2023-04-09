@@ -448,19 +448,10 @@ impl<C: Clock> TaskProvisioner<C> {
         };
 
         // choose vdafinstance
-        let vdafinst = match training_session.vdaf_parameter.noise_parameter {
-            FixedAny::Fixed16(noise) => VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum {
+        let vdafinst = VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum
+        {
                 length: training_session.vdaf_parameter.gradient_len,
-                noise_param: noise
-            },
-            FixedAny::Fixed32(noise) => VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum {
-                length: training_session.vdaf_parameter.gradient_len,
-                noise_param: noise
-            },
-            FixedAny::Fixed64(noise) => VdafInstance::Prio3Aes128FixedPoint64BitBoundedL2VecSum {
-                length: training_session.vdaf_parameter.gradient_len,
-                noise_param: noise
-            },
+                noise_param: training_session.vdaf_parameter.privacy_parameter
         };
 
         // create the task

@@ -6,11 +6,11 @@ use std::{collections::HashMap, fmt::Display, io::Cursor};
 use fixed::traits::Fixed;
 use janus_core::hpke::{generate_hpke_config_and_private_key, HpkeKeypair};
 use janus_messages::{HpkeAeadId, HpkeConfig, HpkeConfigId, HpkeKdfId, HpkeKemId, Role};
-use prio::codec::{CodecError, Decode, Encode};
+use prio::{codec::{CodecError, Decode, Encode}, flp::types::fixedpoint_l2::PrivacyParameterType};
 use rand::random;
 use serde::{Deserialize, Serialize};
 use url::Url;
-use crate::fixed::FixedAny;
+use crate::fixed::{FixedAny, FixedTypeTag};
 
 /////////////////////////////
 // Locations
@@ -41,10 +41,9 @@ pub struct VdafParameter
 {
     pub gradient_len: usize,
 
-    // NOTE: This parameter also decides the bitsize of the fixed type of the gradient entries
-    pub noise_parameter: FixedAny,
+    pub privacy_parameter: PrivacyParameterType,
 
-    // pub submission_type: FixedTypeTag,
+    pub submission_type: FixedTypeTag,
 }
 
 
@@ -155,7 +154,7 @@ pub struct CreateTrainingSessionRequest {
     // noise params
     // NOTE: Unintuitively, this also decides the submission type
     // #[serde(deserialize_with = "Fx::deserialize")]
-    // pub noise_parameter: FixedAny,
+    // pub privacy_parameter: FixedAny,
     // #[serde(deserialize_with = "Fx::deserialize")]
     // #[serde(serialize_with = "Fx::serialize")]
 }

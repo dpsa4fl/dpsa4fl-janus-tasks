@@ -16,6 +16,7 @@ use janus_messages::{
     TaskId, Time,
 };
 use prio::{codec::Encode, vdaf::prio3::Prio3Aes128FixedPointBoundedL2VecSum};
+use prio::flp::types::fixedpoint_l2::zero_privacy_parameter;
 use rand::random;
 
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
@@ -194,7 +195,7 @@ impl JanusTasksClient {
             Prio3Aes128FixedPointBoundedL2VecSum::<Fx>::new_aes128_fixedpoint_boundedl2_vec_sum(
                 2,
                 self.vdaf_parameter.gradient_len,
-                Fx::ZERO,
+                zero_privacy_parameter(),
             )?;
 
         let collector_http_client = reqwest::Client::builder()

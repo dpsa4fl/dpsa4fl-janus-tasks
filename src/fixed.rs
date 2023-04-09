@@ -37,7 +37,7 @@ impl FixedBase for Fixed64 {}
 ///////////////////////////////////////////////////
 // Type dispatch
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FixedTypeTag
 {
     FixedType16Bit,
