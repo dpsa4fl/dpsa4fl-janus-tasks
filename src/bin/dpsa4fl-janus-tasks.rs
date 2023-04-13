@@ -448,10 +448,26 @@ impl<C: Clock> TaskProvisioner<C> {
         };
 
         // choose vdafinstance
-        let vdafinst = VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum
+        let vdafinst = match training_session.vdaf_parameter.submission_type
         {
+            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType16Bit =>
+                VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum
+                {
+                    length: training_session.vdaf_parameter.gradient_len,
+                    noise_param: training_session.vdaf_parameter.privacy_parameter
+                },
+            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType32Bit =>
+                VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum
+                {
+                    length: training_session.vdaf_parameter.gradient_len,
+                    noise_param: training_session.vdaf_parameter.privacy_parameter
+                },
+            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType64Bit =>
+            VdafInstance::Prio3Aes128FixedPoint64BitBoundedL2VecSum
+            {
                 length: training_session.vdaf_parameter.gradient_len,
                 noise_param: training_session.vdaf_parameter.privacy_parameter
+            },
         };
 
         // create the task
