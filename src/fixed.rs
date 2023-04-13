@@ -1,4 +1,6 @@
 
+use std::fmt::Debug;
+
 use fixed::types::extra::{U15, U31, U63};
 use fixed::{FixedI16, FixedI32, FixedI64, traits::Fixed};
 
@@ -76,7 +78,7 @@ impl IsTagInstance<FixedTypeTag> for Fixed64
 
 pub fn float_to_fixed_floor<Fl, Fx>(x: Fl) -> Fx
 where
-    Fl: num_traits::Float,
+    Fl: num_traits::Float + Debug,
     Fx: Fixed,
     Fx::Bits : num_traits::NumCast,
 {
@@ -85,7 +87,7 @@ where
 
 pub fn float_to_fixed_ceil<Fl, Fx>(x: Fl) -> Fx
 where
-    Fl: num_traits::Float,
+    Fl: num_traits::Float + Debug,
     Fx: Fixed,
     Fx::Bits : num_traits::NumCast,
 {
@@ -94,9 +96,9 @@ where
 
 fn float_to_fixed_with<Fl, Fx, Fun>(x: Fl, f: Fun) -> Fx
     where
-        Fl: num_traits::Float,
+        Fl: num_traits::Float + Debug,
         Fx: Fixed,
-        Fx::Bits : num_traits::NumCast,
+        Fx::Bits : num_traits::NumCast + Debug,
         Fun: FnOnce(Fl) -> Fl,
 {
     // the number of bits of our fixed type representation
@@ -112,7 +114,7 @@ fn float_to_fixed_with<Fl, Fx, Fun>(x: Fl, f: Fun) -> Fx
     //   this could be floor or ceil, in order to remove the fractional part
     let x = f(x);
 
-    println!("trying to convert {x} ({} to {})", std::any::type_name::<Fl>, std::any::type_name::<Fx::Bits>);
+    println!("trying to convert {x:?} ({} to {})", std::any::type_name::<Fl>(), std::any::type_name::<Fx::Bits>());
 
     // - convert to integer
     let x = <Fx::Bits as NumCast>::from(x).unwrap();
