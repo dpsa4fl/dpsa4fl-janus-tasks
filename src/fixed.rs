@@ -112,6 +112,8 @@ fn float_to_fixed_with<Fl, Fx, Fun>(x: Fl, f: Fun) -> Fx
     //   this could be floor or ceil, in order to remove the fractional part
     let x = f(x);
 
+    println!("trying to convert {x} ({} to {})", std::any::type_name::<Fl>, std::any::type_name::<Fx::Bits>);
+
     // - convert to integer
     let x = <Fx::Bits as NumCast>::from(x).unwrap();
 
@@ -144,6 +146,15 @@ mod tests
         // left: 2^(-15) + 2^(-16) + 2^(-17) + 2^(-18)
         // right: 2^(-15)
         assert_eq!(float_to_fixed_floor::<f32,Fixed16>(0.000057220458984375), fixed!(0.000030517578125: I1F15));
+
+
+        // left: 2^(-31)
+        // right: 2^(-31)
+        assert_eq!(float_to_fixed_floor::<f32,Fixed32>(0.0000000004656612873077392578125), fixed!(0.0000000004656612873077392578125: I1F31));
+
+
+        assert_eq!(float_to_fixed_floor::<f32,Fixed32>(0.5), fixed!(0.5: I1F31));
+
     }
 
     #[test]
