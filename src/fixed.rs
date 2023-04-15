@@ -11,11 +11,11 @@ use serde::{Serialize, Deserialize};
 
 // To create a trait with downcasting methods, extend `Downcast` or `DowncastSync`
 // and run `impl_downcast!()` on the trait.
-pub trait FixedBase: DowncastSync + DynClone {}
-impl_downcast!(sync FixedBase);  // `sync` => also produce `Arc` downcasts.
+// pub trait FixedBase: DowncastSync + DynClone {}
+// impl_downcast!(sync FixedBase);  // `sync` => also produce `Arc` downcasts.
 
 // implements `Clone` for FixedBase, based on the `DynClone` super trait
-dyn_clone::clone_trait_object!(FixedBase);
+// dyn_clone::clone_trait_object!(FixedBase);
 
 
 ///////////////////////////////////////////////////
@@ -25,15 +25,15 @@ pub type Fixed16 = FixedI16<U15>;
 pub type Fixed32 = FixedI32<U31>;
 pub type Fixed64 = FixedI64<U63>;
 
-pub type FixedDyn = Box<dyn FixedBase>;
+// pub type FixedDyn = Box<dyn FixedBase>;
 
-pub type NoiseParameterType = FixedDyn;
+// pub type NoiseParameterType = FixedDyn;
 
 ///////////////////////////////////////////////////
 // casting
-impl FixedBase for Fixed16 {}
-impl FixedBase for Fixed32 {}
-impl FixedBase for Fixed64 {}
+// impl FixedBase for Fixed16 {}
+// impl FixedBase for Fixed32 {}
+// impl FixedBase for Fixed64 {}
 
 
 ///////////////////////////////////////////////////
