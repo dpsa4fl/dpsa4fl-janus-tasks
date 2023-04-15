@@ -31,7 +31,7 @@ use janus_core::{
 use janus_messages::{Duration, HpkeConfig, Role, TaskId, Time};
 use opentelemetry::metrics::{Histogram, Meter, Unit};
 use prio::codec::Decode;
-use rand::random;
+use rand::{random, distributions::OpenClosed01};
 use serde_json::json;
 
 use clap::Parser;
@@ -143,7 +143,7 @@ pub fn taskprovision_server<C: Clock>(
 
 pub fn taskprovision_filter<C: Clock>(
     datastore: Arc<Datastore<C>>,
-    clock: C,
+    _clock: C,
     config: TaskProvisionerConfig,
 ) -> Result<BoxedFilter<(impl Reply,)>, Error> {
     let meter = opentelemetry::global::meter("janus_aggregator");
@@ -153,7 +153,7 @@ pub fn taskprovision_filter<C: Clock>(
         .with_unit(Unit::new("seconds"))
         .init();
 
-    let aggregator = Arc::new(TaskProvisioner::new(datastore, clock, meter, config));
+    let aggregator = Arc::new(TaskProvisioner::new(datastore, config));
 
     //-------------------------------------------------------
     // create new training session
@@ -197,6 +197,48 @@ pub fn taskprovision_filter<C: Clock>(
             .build(),
         response_time_histogram.clone(),
         "create_session",
+    );
+
+    //-------------------------------------------------------
+    // end training session
+    let end_session_routing = warp::path("end_session");
+    let end_session_responding = warp::post()
+        .and(with_cloned_value(Arc::clone(&aggregator)))
+        // .and(warp::query::<HashMap<String, String>>())
+        .and(warp::body::json())
+        .then(
+            |aggregator: Arc<TaskProvisioner<C>>,
+             session: TrainingSessionId| async move {
+                let result = aggregator.handle_end_session(session).await;
+                match result {
+                    Ok(_) => {
+                        let response = ();
+                        let response =
+                            warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
+                                .into_response();
+                        Ok(response)
+                    }
+                    Err(err) => {
+                        let response = warp::reply::with_status(
+                            warp::reply::json(&err.to_string()),
+                            StatusCode::BAD_REQUEST,
+                        )
+                        .into_response();
+                        Ok(response)
+                    }
+                }
+            },
+        );
+    let end_session_endpoint = compose_common_wrappers(
+        end_session_routing,
+        end_session_responding,
+        warp::cors()
+            .allow_any_origin()
+            .allow_method("POST")
+            .max_age(CORS_PREFLIGHT_CACHE_AGE)
+            .build(),
+        response_time_histogram.clone(),
+        "end_session",
     );
 
     //-------------------------------------------------------
@@ -283,15 +325,16 @@ pub fn taskprovision_filter<C: Clock>(
 
 
     Ok(start_round_endpoint
-        .or(create_session_endpoint)
-        .or(get_vdaf_parameter_endpoint)
-        // .or(upload_endpoint)
-        // .or(aggregate_endpoint)
-        // .or(collect_endpoint)
-        // .or(collect_jobs_get_endpoint)
-        // .or(collect_jobs_delete_endpoint)
-        // .or(aggregate_share_endpoint)
-        .boxed())
+       .or(create_session_endpoint)
+       .or(end_session_endpoint)
+       .or(get_vdaf_parameter_endpoint)
+       // .or(upload_endpoint)
+       // .or(aggregate_endpoint)
+       // .or(collect_endpoint)
+       // .or(collect_jobs_get_endpoint)
+       // .or(collect_jobs_delete_endpoint)
+       // .or(aggregate_share_endpoint)
+       .boxed())
 }
 
 //////////////////////////////////////////////////
@@ -355,17 +398,13 @@ impl BinaryConfig for Config {
 // self:
 
 struct TrainingSession {
-    // endpoints
-    // leader_endpoint: Url,
-    // helper_endpoint: Url,
 
-    //
     role: Role,
+
+    collector_hpke_config: HpkeConfig,
 
     // needs to be the same for both aggregators (section 4.2 of ppm-draft)
     verify_key: SecretBytes,
-
-    collector_hpke_config: HpkeConfig,
 
     // auth tokens
     collector_auth_token: AuthenticationToken,
@@ -384,10 +423,7 @@ struct TrainingSession {
 pub struct TaskProvisioner<C: Clock> {
     /// Datastore used for durable storage.
     datastore: Arc<Datastore<C>>,
-    /// Clock used to sample time.
-    clock: C,
-    // Cache of task aggregators.
-    // task_aggregators: Mutex<HashMap<TaskId, Arc<TaskAggregator>>>,
+
     /// Currently active training runs.
     training_sessions: Mutex<HashMap<TrainingSessionId, TrainingSession>>,
 
@@ -399,24 +435,12 @@ pub struct TaskProvisioner<C: Clock> {
 }
 
 impl<C: Clock> TaskProvisioner<C> {
-    fn new(datastore: Arc<Datastore<C>>, clock: C, _meter: Meter, config: TaskProvisionerConfig) -> Self {
-        // let upload_decrypt_failure_counter = meter
-        //     .u64_counter("janus_upload_decrypt_failures")
-        //     .with_description("Number of decryption failures in the /upload endpoint.")
-        //     .init();
-        // upload_decrypt_failure_counter.add(&Context::current(), 0, &[]);
-
-        // let aggregate_step_failure_counter = aggregate_step_failure_counter(&meter);
-
+    fn new(datastore: Arc<Datastore<C>>, config: TaskProvisionerConfig) -> Self {
         Self {
             datastore,
-            clock,
             training_sessions: Mutex::new(HashMap::new()),
             keyring: Mutex::new(HpkeConfigRegistry::new()),
             config,
-            // task_aggregators: Mutex::new(HashMap::new()),
-            // upload_decrypt_failure_counter,
-            // aggregate_step_failure_counter,
         }
     }
 
@@ -427,7 +451,7 @@ impl<C: Clock> TaskProvisioner<C> {
 
         // get training session with this id
         let mut training_sessions_lock = self.training_sessions.lock().await;
-        let mut training_session = training_sessions_lock
+        let training_session = training_sessions_lock
             .get_mut(&training_session_id)
             .ok_or(anyhow!(
                 "There is no training session with id {}",
@@ -562,6 +586,24 @@ impl<C: Clock> TaskProvisioner<C> {
 
         // respond with id
         Ok(training_session_id)
+    }
+
+    async fn handle_end_session(
+        &self,
+        session: TrainingSessionId,
+    ) -> Result<()>
+    {
+        let mut sessions = self.training_sessions.lock().await;
+        if let Some(_) = sessions.remove(&session)
+        {
+            println!("Removed session with id {session}");
+            Ok(())
+        }
+        else
+        {
+            println!("Attempted to remove session with id {session}, but there was no such session.");
+            Err(anyhow!("Attempted to remove session with id {session}, but there was no such session."))
+        }
     }
 
     async fn handle_get_vdaf_parameter(&self, request: GetVdafParameterRequest) -> Result<VdafParameter, Error>

@@ -139,6 +139,40 @@ impl JanusTasksClient {
         Ok(leader_response.training_session_id)
     }
 
+    /// Send requests to the aggregators to end a new round and delete the associated data.
+    pub async fn end_session(&self, training_session_id: TrainingSessionId) -> Result<()> {
+        let leader_response = self
+            .http_client
+            .post(
+                self.location
+                    .external_leader_tasks
+                    .join("/end_session")
+                    .unwrap(),
+            )
+            .json(&training_session_id)
+            .send()
+            .await?;
+
+        let helper_response = self
+            .http_client
+            .post(
+                self.location
+                    .external_helper_tasks
+                    .join("/end_session")
+                    .unwrap(),
+            )
+            .json(&training_session_id)
+            .send()
+            .await?;
+
+        match (leader_response.status(), helper_response.status()) {
+            (StatusCode::OK, StatusCode::OK) => Ok(()),
+            (res1, res2) => Err(anyhow!(
+                "Ending session not successful, results are: \n{res1}\n\n{res2}"
+            )),
+        }
+    }
+
     /// Send requests to the aggregators to start a new round.
     ///
     /// We return the task id with which the task can be collected.
