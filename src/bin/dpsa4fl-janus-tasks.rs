@@ -1,4 +1,3 @@
-
 use std::{
     net::SocketAddr,
     time::{Instant, UNIX_EPOCH},
@@ -6,8 +5,9 @@ use std::{
 
 use dpsa4fl_janus_tasks::{
     core::{
-        CreateTrainingSessionRequest, CreateTrainingSessionResponse, HpkeConfigRegistry,
-        StartRoundRequest, StartRoundResponse, TrainingSessionId, VdafParameter, GetVdafParameterRequest, GetVdafParameterResponse,
+        CreateTrainingSessionRequest, CreateTrainingSessionResponse, GetVdafParameterRequest,
+        GetVdafParameterResponse, HpkeConfigRegistry, StartRoundRequest, StartRoundResponse,
+        TrainingSessionId, VdafParameter,
     },
     janus_tasks_client::{Fx, TIME_PRECISION},
 };
@@ -31,7 +31,7 @@ use janus_core::{
 use janus_messages::{Duration, HpkeConfig, Role, TaskId, Time};
 use opentelemetry::metrics::{Histogram, Meter, Unit};
 use prio::codec::Decode;
-use rand::{random, distributions::OpenClosed01};
+use rand::{distributions::OpenClosed01, random};
 use serde_json::json;
 
 use clap::Parser;
@@ -47,7 +47,8 @@ use warp::{cors::Cors, filters::BoxedFilter, reply::Response, trace, Filter, Rej
 // main:
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> anyhow::Result<()>
+{
     const CLIENT_USER_AGENT: &str = concat!(
         env!("CARGO_PKG_NAME"),
         "/",
@@ -134,7 +135,8 @@ pub fn taskprovision_server<C: Clock>(
     listen_address: SocketAddr,
     response_headers: HeaderMap,
     shutdown_signal: impl Future<Output = ()> + Send + 'static,
-) -> Result<(SocketAddr, impl Future<Output = ()> + 'static), Error> {
+) -> Result<(SocketAddr, impl Future<Output = ()> + 'static), Error>
+{
     let filter = taskprovision_filter(datastore, clock, config)?;
     let wrapped_filter = filter.with(warp::filters::reply::headers(response_headers));
     let server = warp::serve(wrapped_filter);
@@ -145,7 +147,8 @@ pub fn taskprovision_filter<C: Clock>(
     datastore: Arc<Datastore<C>>,
     _clock: C,
     config: TaskProvisionerConfig,
-) -> Result<BoxedFilter<(impl Reply,)>, Error> {
+) -> Result<BoxedFilter<(impl Reply,)>, Error>
+{
     let meter = opentelemetry::global::meter("janus_aggregator");
     let response_time_histogram = meter
         .f64_histogram("janus_aggregator_response_time")
@@ -207,18 +210,20 @@ pub fn taskprovision_filter<C: Clock>(
         // .and(warp::query::<HashMap<String, String>>())
         .and(warp::body::json())
         .then(
-            |aggregator: Arc<TaskProvisioner<C>>,
-             session: TrainingSessionId| async move {
+            |aggregator: Arc<TaskProvisioner<C>>, session: TrainingSessionId| async move {
                 let result = aggregator.handle_end_session(session).await;
-                match result {
-                    Ok(_) => {
+                match result
+                {
+                    Ok(_) =>
+                    {
                         let response = ();
                         let response =
                             warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
                                 .into_response();
                         Ok(response)
                     }
-                    Err(err) => {
+                    Err(err) =>
+                    {
                         let response = warp::reply::with_status(
                             warp::reply::json(&err.to_string()),
                             StatusCode::BAD_REQUEST,
@@ -251,15 +256,18 @@ pub fn taskprovision_filter<C: Clock>(
         .then(
             |aggregator: Arc<TaskProvisioner<C>>, request: StartRoundRequest| async move {
                 let result = aggregator.handle_start_round(request).await;
-                match result {
-                    Ok(()) => {
+                match result
+                {
+                    Ok(()) =>
+                    {
                         let response = StartRoundResponse {};
                         let response =
                             warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
                                 .into_response();
                         Ok(response)
                     }
-                    Err(err) => {
+                    Err(err) =>
+                    {
                         let response = warp::reply::with_status(
                             warp::reply::json(&err.to_string()),
                             StatusCode::BAD_REQUEST,
@@ -292,15 +300,18 @@ pub fn taskprovision_filter<C: Clock>(
         .then(
             |aggregator: Arc<TaskProvisioner<C>>, request: GetVdafParameterRequest| async move {
                 let result = aggregator.handle_get_vdaf_parameter(request).await;
-                match result {
-                    Ok(vdaf_parameter) => {
-                        let response = GetVdafParameterResponse {vdaf_parameter};
+                match result
+                {
+                    Ok(vdaf_parameter) =>
+                    {
+                        let response = GetVdafParameterResponse { vdaf_parameter };
                         let response =
                             warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
                                 .into_response();
                         Ok(response)
                     }
-                    Err(err) => {
+                    Err(err) =>
+                    {
                         let response = warp::reply::with_status(
                             warp::reply::json(&err.to_string()),
                             StatusCode::BAD_REQUEST,
@@ -323,18 +334,17 @@ pub fn taskprovision_filter<C: Clock>(
         "get_vdaf_parameter",
     );
 
-
     Ok(start_round_endpoint
-       .or(create_session_endpoint)
-       .or(end_session_endpoint)
-       .or(get_vdaf_parameter_endpoint)
-       // .or(upload_endpoint)
-       // .or(aggregate_endpoint)
-       // .or(collect_endpoint)
-       // .or(collect_jobs_get_endpoint)
-       // .or(collect_jobs_delete_endpoint)
-       // .or(aggregate_share_endpoint)
-       .boxed())
+        .or(create_session_endpoint)
+        .or(end_session_endpoint)
+        .or(get_vdaf_parameter_endpoint)
+        // .or(upload_endpoint)
+        // .or(aggregate_endpoint)
+        // .or(collect_endpoint)
+        // .or(collect_jobs_get_endpoint)
+        // .or(collect_jobs_delete_endpoint)
+        // .or(aggregate_share_endpoint)
+        .boxed())
 }
 
 //////////////////////////////////////////////////
@@ -347,13 +357,16 @@ pub fn taskprovision_filter<C: Clock>(
     rename_all = "kebab-case",
     version = env!("CARGO_PKG_VERSION"),
 )]
-struct Options {
+struct Options
+{
     #[clap(flatten)]
     common: CommonBinaryOptions,
 }
 
-impl BinaryOptions for Options {
-    fn common_options(&self) -> &CommonBinaryOptions {
+impl BinaryOptions for Options
+{
+    fn common_options(&self) -> &CommonBinaryOptions
+    {
         &self.common
     }
 }
@@ -362,7 +375,8 @@ impl BinaryOptions for Options {
 // config:
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-struct Config {
+struct Config
+{
     #[serde(flatten)]
     common_config: CommonConfig,
     // #[serde(flatten)]
@@ -384,12 +398,15 @@ pub struct TaskProvisionerConfig
     pub helper_endpoint: Url,
 }
 
-impl BinaryConfig for Config {
-    fn common_config(&self) -> &CommonConfig {
+impl BinaryConfig for Config
+{
+    fn common_config(&self) -> &CommonConfig
+    {
         &self.common_config
     }
 
-    fn common_config_mut(&mut self) -> &mut CommonConfig {
+    fn common_config_mut(&mut self) -> &mut CommonConfig
+    {
         &mut self.common_config
     }
 }
@@ -397,8 +414,8 @@ impl BinaryConfig for Config {
 //////////////////////////////////////////////////
 // self:
 
-struct TrainingSession {
-
+struct TrainingSession
+{
     role: Role,
 
     collector_hpke_config: HpkeConfig,
@@ -417,10 +434,11 @@ struct TrainingSession {
     vdaf_parameter: VdafParameter,
 
     // my tasks, most recent one is at the end
-    tasks: Vec<TaskId>
+    tasks: Vec<TaskId>,
 }
 
-pub struct TaskProvisioner<C: Clock> {
+pub struct TaskProvisioner<C: Clock>
+{
     /// Datastore used for durable storage.
     datastore: Arc<Datastore<C>>,
 
@@ -434,8 +452,10 @@ pub struct TaskProvisioner<C: Clock> {
     keyring: Mutex<HpkeConfigRegistry>,
 }
 
-impl<C: Clock> TaskProvisioner<C> {
-    fn new(datastore: Arc<Datastore<C>>, config: TaskProvisionerConfig) -> Self {
+impl<C: Clock> TaskProvisioner<C>
+{
+    fn new(datastore: Arc<Datastore<C>>, config: TaskProvisionerConfig) -> Self
+    {
         Self {
             datastore,
             training_sessions: Mutex::new(HashMap::new()),
@@ -444,19 +464,21 @@ impl<C: Clock> TaskProvisioner<C> {
         }
     }
 
-    async fn handle_start_round(&self, request: StartRoundRequest) -> Result<(), Error> {
+    async fn handle_start_round(&self, request: StartRoundRequest) -> Result<(), Error>
+    {
         //---------------------- decode parameters --------------------------
         // session id
-        let training_session_id = request.training_session_id; 
+        let training_session_id = request.training_session_id;
 
         // get training session with this id
         let mut training_sessions_lock = self.training_sessions.lock().await;
-        let training_session = training_sessions_lock
-            .get_mut(&training_session_id)
-            .ok_or(anyhow!(
-                "There is no training session with id {}",
-                &training_session_id
-            ))?;
+        let training_session =
+            training_sessions_lock
+                .get_mut(&training_session_id)
+                .ok_or(anyhow!(
+                    "There is no training session with id {}",
+                    &training_session_id
+                ))?;
 
         // task id
         let task_id_bytes = general_purpose::URL_SAFE_NO_PAD.decode(request.task_id_encoded)?;
@@ -465,9 +487,12 @@ impl<C: Clock> TaskProvisioner<C> {
         // -------------------- create new task -----------------------------
         let deadline = UNIX_EPOCH.elapsed()?.as_secs() + 10 * 60;
 
-        let collector_auth_tokens = if training_session.role == Role::Leader {
+        let collector_auth_tokens = if training_session.role == Role::Leader
+        {
             vec![training_session.collector_auth_token.clone()]
-        } else {
+        }
+        else
+        {
             Vec::new()
         };
 
@@ -475,23 +500,26 @@ impl<C: Clock> TaskProvisioner<C> {
         let vdafinst = match training_session.vdaf_parameter.submission_type
         {
             dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType16Bit =>
-                VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum
-                {
-                    length: training_session.vdaf_parameter.gradient_len,
-                    noise_param: training_session.vdaf_parameter.privacy_parameter
-                },
-            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType32Bit =>
-                VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum
-                {
-                    length: training_session.vdaf_parameter.gradient_len,
-                    noise_param: training_session.vdaf_parameter.privacy_parameter
-                },
-            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType64Bit =>
-            VdafInstance::Prio3Aes128FixedPoint64BitBoundedL2VecSum
             {
-                length: training_session.vdaf_parameter.gradient_len,
-                noise_param: training_session.vdaf_parameter.privacy_parameter
-            },
+                VdafInstance::Prio3Aes128FixedPoint16BitBoundedL2VecSum {
+                    length: training_session.vdaf_parameter.gradient_len,
+                    noise_param: training_session.vdaf_parameter.privacy_parameter,
+                }
+            }
+            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType32Bit =>
+            {
+                VdafInstance::Prio3Aes128FixedPoint32BitBoundedL2VecSum {
+                    length: training_session.vdaf_parameter.gradient_len,
+                    noise_param: training_session.vdaf_parameter.privacy_parameter,
+                }
+            }
+            dpsa4fl_janus_tasks::fixed::FixedTypeTag::FixedType64Bit =>
+            {
+                VdafInstance::Prio3Aes128FixedPoint64BitBoundedL2VecSum {
+                    length: training_session.vdaf_parameter.gradient_len,
+                    noise_param: training_session.vdaf_parameter.privacy_parameter,
+                }
+            }
         };
 
         // create the task
@@ -529,7 +557,8 @@ impl<C: Clock> TaskProvisioner<C> {
     async fn handle_create_session(
         &self,
         request: CreateTrainingSessionRequest,
-    ) -> Result<TrainingSessionId> {
+    ) -> Result<TrainingSessionId>
+    {
         // decode fields
         let CreateTrainingSessionRequest {
             training_session_id,
@@ -543,14 +572,18 @@ impl<C: Clock> TaskProvisioner<C> {
 
         // prepare id
         // (take requested id if exists, else generate new one)
-        let training_session_id = if let Some(id) = training_session_id {
-            if self.training_sessions.lock().await.contains_key(&id) {
+        let training_session_id = if let Some(id) = training_session_id
+        {
+            if self.training_sessions.lock().await.contains_key(&id)
+            {
                 return Err(anyhow!(
                     "There already exists a training session with id {id}."
                 ));
             }
             id
-        } else {
+        }
+        else
+        {
             let id: u16 = random();
             id.into()
         };
@@ -588,10 +621,7 @@ impl<C: Clock> TaskProvisioner<C> {
         Ok(training_session_id)
     }
 
-    async fn handle_end_session(
-        &self,
-        session: TrainingSessionId,
-    ) -> Result<()>
+    async fn handle_end_session(&self, session: TrainingSessionId) -> Result<()>
     {
         let mut sessions = self.training_sessions.lock().await;
         if let Some(_) = sessions.remove(&session)
@@ -601,12 +631,19 @@ impl<C: Clock> TaskProvisioner<C> {
         }
         else
         {
-            println!("Attempted to remove session with id {session}, but there was no such session.");
-            Err(anyhow!("Attempted to remove session with id {session}, but there was no such session."))
+            println!(
+                "Attempted to remove session with id {session}, but there was no such session."
+            );
+            Err(anyhow!(
+                "Attempted to remove session with id {session}, but there was no such session."
+            ))
         }
     }
 
-    async fn handle_get_vdaf_parameter(&self, request: GetVdafParameterRequest) -> Result<VdafParameter, Error>
+    async fn handle_get_vdaf_parameter(
+        &self,
+        request: GetVdafParameterRequest,
+    ) -> Result<VdafParameter, Error>
     {
         // task id
         let task_id_bytes = general_purpose::URL_SAFE_NO_PAD.decode(request.task_id_encoded)?;
@@ -614,13 +651,20 @@ impl<C: Clock> TaskProvisioner<C> {
 
         // find training session with this task_id
         let sessions = self.training_sessions.lock().await;
-        let sessions_with_id: Vec<_> = sessions.values().filter(|v| v.tasks.contains(&task_id)).collect();
+        let sessions_with_id: Vec<_> = sessions
+            .values()
+            .filter(|v| v.tasks.contains(&task_id))
+            .collect();
 
         let session_with_id = match sessions_with_id.len()
         {
-            0 => Err(anyhow!("Could not find session containing task with id {task_id}.")),
+            0 => Err(anyhow!(
+                "Could not find session containing task with id {task_id}."
+            )),
             1 => Ok(sessions_with_id[0]),
-            _ => Err(anyhow!("Multiple sessions containing taskd id {task_id} exist."))
+            _ => Err(anyhow!(
+                "Multiple sessions containing taskd id {task_id} exist."
+            )),
         }?;
 
         Ok(session_with_id.vdaf_parameter.clone())
@@ -630,7 +674,8 @@ impl<C: Clock> TaskProvisioner<C> {
 //////////////////////////////////////////////////
 // code:
 
-async fn provision_tasks<C: Clock>(datastore: &Datastore<C>, tasks: Vec<Task>) -> Result<()> {
+async fn provision_tasks<C: Clock>(datastore: &Datastore<C>, tasks: Vec<Task>) -> Result<()>
+{
     // Write all tasks requested.
     let tasks = Arc::new(tasks);
     // info!(task_count = %tasks.len(), "Writing tasks");
@@ -638,10 +683,12 @@ async fn provision_tasks<C: Clock>(datastore: &Datastore<C>, tasks: Vec<Task>) -
         .run_tx(|tx| {
             let tasks = Arc::clone(&tasks);
             Box::pin(async move {
-                for task in tasks.iter() {
+                for task in tasks.iter()
+                {
                     // We attempt to delete the task, but ignore "task not found" errors since
                     // the task not existing is an OK outcome too.
-                    match tx.delete_task(task.id()).await {
+                    match tx.delete_task(task.id()).await
+                    {
                         Ok(_) | Err(datastore::Error::MutationTargetNotFound) => (),
                         err => err?,
                     }
@@ -738,10 +785,13 @@ where
             .map(Instant::now)
             .and(filter)
             .map(move |_start: Instant, result: Result<T, Error>| {
-                let error_code = if let Err(error) = &result {
+                let error_code = if let Err(error) = &result
+                {
                     warn!(?error, endpoint = name, "Error handling endpoint");
                     error.to_string()
-                } else {
+                }
+                else
+                {
                     "".to_owned()
                 };
 
@@ -754,7 +804,8 @@ where
                 //     ],
                 // );
 
-                match result {
+                match result
+                {
                     Ok(reply) => reply.into_response(),
                     Err(_e) => build_problem_details_response(error_code, None),
                 }
@@ -837,7 +888,8 @@ where
 /// Construct an error response in accordance with §3.2.
 // TODO(https://github.com/ietf-wg-ppm/draft-ietf-ppm-dap/issues/209): The handling of the instance,
 // title, detail, and taskid fields are subject to change.
-fn build_problem_details_response(error_type: String, task_id: Option<TaskId>) -> Response {
+fn build_problem_details_response(error_type: String, task_id: Option<TaskId>) -> Response
+{
     // let status = error_type.http_status();
     let status = StatusCode::SEE_OTHER;
 

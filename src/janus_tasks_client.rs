@@ -15,14 +15,17 @@ use janus_messages::{
     query_type::TimeInterval, Duration, HpkeAeadId, HpkeKdfId, HpkeKemId, Interval, Query, Role,
     TaskId, Time,
 };
-use prio::{codec::Encode, vdaf::prio3::Prio3Aes128FixedPointBoundedL2VecSum};
 use prio::flp::types::fixedpoint_l2::zero_privacy_parameter;
+use prio::{codec::Encode, vdaf::prio3::Prio3Aes128FixedPointBoundedL2VecSum};
 use rand::random;
 
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
 use reqwest::Url;
 
-use crate::{fixed::FixedAny, core::{VdafParameter, GetVdafParameterRequest, GetVdafParameterResponse}};
+use crate::{
+    core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter},
+    fixed::FixedAny,
+};
 
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,
@@ -32,7 +35,8 @@ use super::core::{
 pub type Fx = FixedI32<U31>;
 pub const TIME_PRECISION: u64 = 3600;
 
-pub struct JanusTasksClient {
+pub struct JanusTasksClient
+{
     http_client: reqwest::Client,
     location: Locations,
     hpke_keypair: HpkeKeypair,
@@ -41,8 +45,10 @@ pub struct JanusTasksClient {
     vdaf_parameter: VdafParameter,
 }
 
-impl JanusTasksClient {
-    pub fn new(location: Locations, vdaf_parameter: VdafParameter) -> Self {
+impl JanusTasksClient
+{
+    pub fn new(location: Locations, vdaf_parameter: VdafParameter) -> Self
+    {
         let leader_auth_token = rand::random::<[u8; 16]>().to_vec().into();
         let collector_auth_token = rand::random::<[u8; 16]>().to_vec().into();
 
@@ -65,7 +71,8 @@ impl JanusTasksClient {
         }
     }
 
-    pub async fn create_session(&self) -> Result<TrainingSessionId> {
+    pub async fn create_session(&self) -> Result<TrainingSessionId>
+    {
         let leader_auth_token_encoded =
             general_purpose::URL_SAFE_NO_PAD.encode(self.leader_auth_token.as_bytes());
         let collector_auth_token_encoded =
@@ -96,12 +103,15 @@ impl JanusTasksClient {
             .json(&make_request(Role::Leader, None))
             .send()
             .await?;
-        let leader_response = match leader_response.status() {
-            StatusCode::OK => {
+        let leader_response = match leader_response.status()
+        {
+            StatusCode::OK =>
+            {
                 let response: CreateTrainingSessionResponse = leader_response.json().await?;
                 response
             }
-            res => {
+            res =>
+            {
                 return Err(anyhow!("Got error from leader: {res}"));
             }
         };
@@ -121,12 +131,15 @@ impl JanusTasksClient {
             .send()
             .await?;
 
-        let helper_response = match helper_response.status() {
-            StatusCode::OK => {
+        let helper_response = match helper_response.status()
+        {
+            StatusCode::OK =>
+            {
                 let response: CreateTrainingSessionResponse = helper_response.json().await?;
                 response
             }
-            res => {
+            res =>
+            {
                 return Err(anyhow!("Got error from helper: {res}"));
             }
         };
@@ -140,7 +153,8 @@ impl JanusTasksClient {
     }
 
     /// Send requests to the aggregators to end a new round and delete the associated data.
-    pub async fn end_session(&self, training_session_id: TrainingSessionId) -> Result<()> {
+    pub async fn end_session(&self, training_session_id: TrainingSessionId) -> Result<()>
+    {
         let leader_response = self
             .http_client
             .post(
@@ -165,7 +179,8 @@ impl JanusTasksClient {
             .send()
             .await?;
 
-        match (leader_response.status(), helper_response.status()) {
+        match (leader_response.status(), helper_response.status())
+        {
             (StatusCode::OK, StatusCode::OK) => Ok(()),
             (res1, res2) => Err(anyhow!(
                 "Ending session not successful, results are: \n{res1}\n\n{res2}"
@@ -176,7 +191,8 @@ impl JanusTasksClient {
     /// Send requests to the aggregators to start a new round.
     ///
     /// We return the task id with which the task can be collected.
-    pub async fn start_round(&self, training_session_id: TrainingSessionId) -> Result<TaskId> {
+    pub async fn start_round(&self, training_session_id: TrainingSessionId) -> Result<TaskId>
+    {
         let task_id: TaskId = random();
         let task_id_encoded = general_purpose::URL_SAFE_NO_PAD.encode(&task_id.get_encoded());
         let request: StartRoundRequest = StartRoundRequest {
@@ -207,7 +223,8 @@ impl JanusTasksClient {
             .send()
             .await?;
 
-        match (leader_response.status(), helper_response.status()) {
+        match (leader_response.status(), helper_response.status())
+        {
             (StatusCode::OK, StatusCode::OK) => Ok(task_id),
             (res1, res2) => Err(anyhow!(
                 "Starting round not successful, results are: \n{res1}\n\n{res2}"
@@ -216,7 +233,8 @@ impl JanusTasksClient {
     }
 
     /// Collect results
-    pub async fn collect(&self, task_id: TaskId) -> Result<Collection<Vec<f64>, TimeInterval>> {
+    pub async fn collect(&self, task_id: TaskId) -> Result<Collection<Vec<f64>, TimeInterval>>
+    {
         let params = CollectorParameters::new(
             task_id,
             self.location.external_leader_main.clone(),
@@ -273,11 +291,13 @@ impl JanusTasksClient {
     }
 }
 
-
 //////////////////////////////////////////////////////
 // client functionality for dpas4fl clients
 
-pub async fn get_vdaf_parameter_from_task(tasks_server: Url, task_id: TaskId) -> Result<VdafParameter>
+pub async fn get_vdaf_parameter_from_task(
+    tasks_server: Url,
+    task_id: TaskId,
+) -> Result<VdafParameter>
 {
     // TODO encode task id and make request
     let task_id_encoded = general_purpose::URL_SAFE_NO_PAD.encode(&task_id.get_encoded());
@@ -285,20 +305,13 @@ pub async fn get_vdaf_parameter_from_task(tasks_server: Url, task_id: TaskId) ->
     let request = GetVdafParameterRequest { task_id_encoded };
 
     let response = reqwest::Client::new()
-        .post(
-                tasks_server
-                .join("/get_vdaf_parameter")
-                .unwrap(),
-        )
+        .post(tasks_server.join("/get_vdaf_parameter").unwrap())
         .json(&request)
         .send()
         .await?;
 
-    let param : Result<GetVdafParameterResponse> = response.json().await.map_err(|e| anyhow!("got err: {e}"));
+    let param: Result<GetVdafParameterResponse> =
+        response.json().await.map_err(|e| anyhow!("got err: {e}"));
 
     param.map(|x| x.vdaf_parameter)
 }
-
-
-
-
