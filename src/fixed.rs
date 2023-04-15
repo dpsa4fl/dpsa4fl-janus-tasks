@@ -189,38 +189,45 @@ pub enum FixedAny
     Fixed64(Fixed64),
 }
 
-impl FixedAny
+pub enum VecFixedAny
 {
-    pub fn get_tag(&self) -> FixedTypeTag
-    {
-        match self
-        {
-            FixedAny::Fixed16(_) => FixedTypeTag::FixedType16Bit,
-            FixedAny::Fixed32(_) => FixedTypeTag::FixedType32Bit,
-            FixedAny::Fixed64(_) => FixedTypeTag::FixedType64Bit,
-        }
-    }
-
-    pub fn downcast<X : IsTagInstance<FixedTypeTag> + FixedBase>(self) -> Option<X>
-    {
-        match (X::get_tag(), self)
-        {
-            (FixedTypeTag::FixedType16Bit, FixedAny::Fixed16(a)) => {
-                let a : FixedDyn = Box::new(a);
-                a.downcast::<X>().ok().map(|x| *x)
-            },
-            (FixedTypeTag::FixedType32Bit, FixedAny::Fixed32(a)) => {
-                let a : FixedDyn = Box::new(a);
-                a.downcast::<X>().ok().map(|x| *x)
-            },
-            (FixedTypeTag::FixedType64Bit, FixedAny::Fixed64(a)) => {
-                let a : FixedDyn = Box::new(a);
-                a.downcast::<X>().ok().map(|x| *x)
-            },
-            (_,_) => None,
-        }
-    }
+    VecFixed16(Vec<Fixed16>),
+    VecFixed32(Vec<Fixed32>),
+    VecFixed64(Vec<Fixed64>),
 }
+
+// impl FixedAny
+// {
+//     pub fn get_tag(&self) -> FixedTypeTag
+//     {
+//         match self
+//         {
+//             FixedAny::Fixed16(_) => FixedTypeTag::FixedType16Bit,
+//             FixedAny::Fixed32(_) => FixedTypeTag::FixedType32Bit,
+//             FixedAny::Fixed64(_) => FixedTypeTag::FixedType64Bit,
+//         }
+//     }
+
+//     pub fn downcast<X : IsTagInstance<FixedTypeTag> + FixedBase>(self) -> Option<X>
+//     {
+//         match (X::get_tag(), self)
+//         {
+//             (FixedTypeTag::FixedType16Bit, FixedAny::Fixed16(a)) => {
+//                 let a : FixedDyn = Box::new(a);
+//                 a.downcast::<X>().ok().map(|x| *x)
+//             },
+//             (FixedTypeTag::FixedType32Bit, FixedAny::Fixed32(a)) => {
+//                 let a : FixedDyn = Box::new(a);
+//                 a.downcast::<X>().ok().map(|x| *x)
+//             },
+//             (FixedTypeTag::FixedType64Bit, FixedAny::Fixed64(a)) => {
+//                 let a : FixedDyn = Box::new(a);
+//                 a.downcast::<X>().ok().map(|x| *x)
+//             },
+//             (_,_) => None,
+//         }
+//     }
+// }
 
 
 
