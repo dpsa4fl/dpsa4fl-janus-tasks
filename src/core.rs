@@ -1,6 +1,3 @@
-//////////////////////////////////////////////////
-// data structures:
-
 use std::{collections::HashMap, fmt::Display, io::Cursor};
 
 use crate::fixed::FixedTypeTag;
@@ -25,7 +22,6 @@ pub struct Locations
     pub external_helper_tasks: Url,
     pub external_leader_main: Url,
     pub external_helper_main: Url,
-    // controller: Url, // the server that controls the learning process
 }
 
 impl Locations
@@ -151,14 +147,7 @@ pub struct CreateTrainingSessionRequest
     // id if known
     pub training_session_id: Option<TrainingSessionId>,
 
-    // endpoints
-    // pub leader_endpoint: Url,
-    // pub helper_endpoint: Url,
-
-    //
     pub role: Role,
-
-    // pub num_gradient_entries: usize,
 
     // needs to be the same for both aggregators (section 4.2 of ppm-draft)
     pub verify_key_encoded: String, // in unpadded base64url
@@ -171,12 +160,6 @@ pub struct CreateTrainingSessionRequest
 
     // vdaf params
     pub vdaf_parameter: VdafParameter,
-    // noise params
-    // NOTE: Unintuitively, this also decides the submission type
-    // #[serde(deserialize_with = "Fx::deserialize")]
-    // pub privacy_parameter: FixedAny,
-    // #[serde(deserialize_with = "Fx::deserialize")]
-    // #[serde(serialize_with = "Fx::serialize")]
 }
 
 #[derive(Debug, Serialize, Deserialize)]

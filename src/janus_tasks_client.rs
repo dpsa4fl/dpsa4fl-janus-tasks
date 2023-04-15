@@ -1,8 +1,7 @@
 use std::time::UNIX_EPOCH;
 
-use base64::{engine::general_purpose, Engine};
-// use base64::URL_SAFE_NO_PAD;
 use anyhow::{anyhow, Result};
+use base64::{engine::general_purpose, Engine};
 use fixed::types::extra::U31;
 use fixed::FixedI32;
 use http::StatusCode;
@@ -296,7 +295,6 @@ pub async fn get_vdaf_parameter_from_task(
     task_id: TaskId,
 ) -> Result<VdafParameter>
 {
-    // TODO encode task id and make request
     let task_id_encoded = general_purpose::URL_SAFE_NO_PAD.encode(&task_id.get_encoded());
 
     let request = GetVdafParameterRequest { task_id_encoded };
