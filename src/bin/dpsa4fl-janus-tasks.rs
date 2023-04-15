@@ -9,12 +9,12 @@ use dpsa4fl_janus_tasks::{
         GetVdafParameterResponse, HpkeConfigRegistry, StartRoundRequest, StartRoundResponse,
         TrainingSessionId, VdafParameter,
     },
-    janus_tasks_client::{Fx, TIME_PRECISION},
+    janus_tasks_client::TIME_PRECISION,
 };
 
 use anyhow::{anyhow, Context, Error, Result};
 use base64::{engine::general_purpose, Engine};
-use dpsa4fl_janus_tasks::fixed::FixedAny;
+
 use http::{HeaderMap, StatusCode};
 use janus_aggregator::{
     binary_utils::{janus_main, setup_signal_handler, BinaryOptions, CommonBinaryOptions},
@@ -29,9 +29,9 @@ use janus_core::{
     time::{Clock, RealClock},
 };
 use janus_messages::{Duration, HpkeConfig, Role, TaskId, Time};
-use opentelemetry::metrics::{Histogram, Meter, Unit};
+use opentelemetry::metrics::{Histogram, Unit};
 use prio::codec::Decode;
-use rand::{distributions::OpenClosed01, random};
+use rand::random;
 use serde_json::json;
 
 use clap::Parser;

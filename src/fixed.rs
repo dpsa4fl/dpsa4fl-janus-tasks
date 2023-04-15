@@ -3,8 +3,6 @@ use std::fmt::Debug;
 use fixed::types::extra::{U15, U31, U63};
 use fixed::{traits::Fixed, FixedI16, FixedI32, FixedI64};
 
-use downcast_rs::DowncastSync;
-use dyn_clone::DynClone;
 use num_traits::NumCast;
 use serde::{Deserialize, Serialize};
 

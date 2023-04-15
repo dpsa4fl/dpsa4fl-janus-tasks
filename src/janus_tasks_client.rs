@@ -22,10 +22,7 @@ use rand::random;
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
 use reqwest::Url;
 
-use crate::{
-    core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter},
-    fixed::FixedAny,
-};
+use crate::core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter};
 
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,

@@ -3,8 +3,8 @@
 
 use std::{collections::HashMap, fmt::Display, io::Cursor};
 
-use crate::fixed::{FixedAny, FixedTypeTag};
-use fixed::traits::Fixed;
+use crate::fixed::FixedTypeTag;
+
 use janus_core::hpke::{generate_hpke_config_and_private_key, HpkeKeypair};
 use janus_messages::{HpkeAeadId, HpkeConfig, HpkeConfigId, HpkeKdfId, HpkeKemId, Role};
 use prio::{
