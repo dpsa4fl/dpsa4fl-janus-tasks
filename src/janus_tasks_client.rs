@@ -21,7 +21,7 @@ use rand::random;
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
 use reqwest::Url;
 
-use crate::core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter, MainLocations};
+use crate::core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter, MainLocations, TasksLocations};
 
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,
@@ -313,16 +313,36 @@ pub async fn get_vdaf_parameter_from_task(
 
 
 pub async fn get_main_loctions(
-    tasks_server: Url,
+    tasks_servers: TasksLocations,
 ) -> Result<MainLocations>
 {
-    let response = reqwest::Client::new()
-        .get(tasks_server.join("/get_main_loctions").unwrap())
+    let response_leader = reqwest::Client::new()
+        .get(tasks_servers.external_leader_tasks.join("/get_main_loctions").unwrap())
         .send()
         .await?;
 
-    let param: Result<MainLocations> =
-        response.json().await.map_err(|e| anyhow!("got err: {e}"));
+    let response_helper = reqwest::Client::new()
+        .get(tasks_servers.external_helper_tasks.join("/get_main_loctions").unwrap())
+        .send()
+        .await?;
 
-    param
+    let result_leader : Result<MainLocations, _> = response_leader.json().await;
+    let result_helper : Result<MainLocations, _> = response_helper.json().await;
+
+    match (result_leader, result_helper)
+    {
+        (Ok(a), Ok(b)) => {
+            if a == b
+            {
+                Ok(a)
+            }
+            else
+            {
+                Err(anyhow!("The aggregators returned different main locations ({a:?} and {b:?})"))
+            }
+        },
+        (res1, res2) => Err(anyhow!(
+            "Starting round not successful, results are: \n{res1:?}\n\n{res2:?}"
+        )),
+    }
 }
