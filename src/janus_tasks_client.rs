@@ -312,17 +312,17 @@ pub async fn get_vdaf_parameter_from_task(
 }
 
 
-pub async fn get_main_loctions(
+pub async fn get_main_locations(
     tasks_servers: TasksLocations,
 ) -> Result<MainLocations>
 {
     let response_leader = reqwest::Client::new()
-        .get(tasks_servers.external_leader_tasks.join("/get_main_loctions").unwrap())
+        .get(tasks_servers.external_leader_tasks.join("/get_main_locations").unwrap())
         .send()
         .await?;
 
     let response_helper = reqwest::Client::new()
-        .get(tasks_servers.external_helper_tasks.join("/get_main_loctions").unwrap())
+        .get(tasks_servers.external_helper_tasks.join("/get_main_locations").unwrap())
         .send()
         .await?;
 
