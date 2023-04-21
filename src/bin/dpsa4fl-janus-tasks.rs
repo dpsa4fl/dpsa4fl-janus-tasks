@@ -7,7 +7,7 @@ use dpsa4fl_janus_tasks::{
     core::{
         CreateTrainingSessionRequest, CreateTrainingSessionResponse, GetVdafParameterRequest,
         GetVdafParameterResponse, HpkeConfigRegistry, StartRoundRequest, StartRoundResponse,
-        TrainingSessionId, VdafParameter,
+        TrainingSessionId, VdafParameter, MainLocations,
     },
     janus_tasks_client::TIME_PRECISION,
 };
@@ -334,16 +334,36 @@ pub fn taskprovision_filter<C: Clock>(
         "get_vdaf_parameter",
     );
 
+    //-------------------------------------------------------
+    // get main locations
+    let get_main_locations_routing = warp::path("get_main_locations");
+    let get_main_locations_responding = warp::get()
+        .and(with_cloned_value(Arc::clone(&aggregator)))
+        .then(
+            |aggregator: Arc<TaskProvisioner<C>>| async move {
+                let response = aggregator.config.main_locations.clone();
+                let response = warp::reply::with_status(warp::reply::json(&response), StatusCode::OK)
+                                .into_response();
+                Ok(response)
+            }
+        );
+    let get_main_locations_endpoint = compose_common_wrappers(
+        get_main_locations_routing,
+        get_main_locations_responding,
+        warp::cors()
+            .allow_any_origin()
+            .allow_method("GET")
+            .max_age(CORS_PREFLIGHT_CACHE_AGE)
+            .build(),
+        response_time_histogram.clone(),
+        "get_main_locations",
+    );
+
     Ok(start_round_endpoint
         .or(create_session_endpoint)
         .or(end_session_endpoint)
         .or(get_vdaf_parameter_endpoint)
-        // .or(upload_endpoint)
-        // .or(aggregate_endpoint)
-        // .or(collect_endpoint)
-        // .or(collect_jobs_get_endpoint)
-        // .or(collect_jobs_delete_endpoint)
-        // .or(aggregate_share_endpoint)
+        .or(get_main_locations_endpoint)
         .boxed())
 }
 
@@ -396,6 +416,9 @@ pub struct TaskProvisionerConfig
     // the internal endpoint urls
     pub leader_endpoint: Url,
     pub helper_endpoint: Url,
+
+    #[serde(flatten)]
+    main_locations: MainLocations,
 }
 
 impl BinaryConfig for Config

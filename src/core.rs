@@ -35,6 +35,20 @@ impl Locations
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TasksLocations
+{
+    pub external_leader_tasks: Url,
+    pub external_helper_tasks: Url,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MainLocations
+{
+    pub external_leader_main: Url,
+    pub external_helper_main: Url,
+}
+
 /////////////////////////////
 // VDAF Parametrization
 

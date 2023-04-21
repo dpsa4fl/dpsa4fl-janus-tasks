@@ -21,7 +21,7 @@ use rand::random;
 use janus_aggregator::task::PRIO3_AES128_VERIFY_KEY_LENGTH;
 use reqwest::Url;
 
-use crate::core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter};
+use crate::core::{GetVdafParameterRequest, GetVdafParameterResponse, VdafParameter, MainLocations};
 
 use super::core::{
     CreateTrainingSessionRequest, CreateTrainingSessionResponse, Locations, StartRoundRequest,
@@ -309,4 +309,20 @@ pub async fn get_vdaf_parameter_from_task(
         response.json().await.map_err(|e| anyhow!("got err: {e}"));
 
     param.map(|x| x.vdaf_parameter)
+}
+
+
+pub async fn get_main_loctions(
+    tasks_server: Url,
+) -> Result<MainLocations>
+{
+    let response = reqwest::Client::new()
+        .get(tasks_server.join("/get_main_loctions").unwrap())
+        .send()
+        .await?;
+
+    let param: Result<MainLocations> =
+        response.json().await.map_err(|e| anyhow!("got err: {e}"));
+
+    param
 }
