@@ -98,7 +98,7 @@ where
     Fx::Bits: num_traits::NumCast + Debug,
     Fun: FnOnce(Fl) -> Fl,
 {
-    println!("Before converting float: {x:?}, type: {}", x.classify());
+    println!("Before converting float: {x:?}, type: {:?}", x.classify());
 
     // the number of bits of our fixed type representation
     let n = Fx::Signed::FRAC_NBITS + Fx::Signed::INT_NBITS;
