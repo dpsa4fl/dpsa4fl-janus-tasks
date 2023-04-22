@@ -92,7 +92,7 @@ impl JanusTasksClient
             .http_client
             .post(
                 self.location
-                    .external_leader_tasks
+                    .tasks.external_leader
                     .join("/create_session")
                     .unwrap(),
             )
@@ -116,7 +116,7 @@ impl JanusTasksClient
             .http_client
             .post(
                 self.location
-                    .external_helper_tasks
+                    .tasks.external_helper
                     .join("/create_session")
                     .unwrap(),
             )
@@ -155,7 +155,7 @@ impl JanusTasksClient
             .http_client
             .post(
                 self.location
-                    .external_leader_tasks
+                    .tasks.external_leader
                     .join("/end_session")
                     .unwrap(),
             )
@@ -167,7 +167,7 @@ impl JanusTasksClient
             .http_client
             .post(
                 self.location
-                    .external_helper_tasks
+                    .tasks.external_helper
                     .join("/end_session")
                     .unwrap(),
             )
@@ -199,7 +199,7 @@ impl JanusTasksClient
             .http_client
             .post(
                 self.location
-                    .external_leader_tasks
+                    .tasks.external_leader
                     .join("/start_round")
                     .unwrap(),
             )
@@ -211,7 +211,7 @@ impl JanusTasksClient
             .http_client
             .post(
                 self.location
-                    .external_helper_tasks
+                    .tasks.external_helper
                     .join("/start_round")
                     .unwrap(),
             )
@@ -233,7 +233,7 @@ impl JanusTasksClient
     {
         let params = CollectorParameters::new(
             task_id,
-            self.location.external_leader_main.clone(),
+            self.location.main.external_leader.clone(),
             self.collector_auth_token.clone(),
             self.hpke_keypair.config().clone(),
             self.hpke_keypair.private_key().clone(),
@@ -261,12 +261,12 @@ impl JanusTasksClient
 
         let host = self
             .location
-            .external_leader_main
+            .main.external_leader
             .host()
             .ok_or(anyhow!("Couldnt get hostname"))?;
         let port = self
             .location
-            .external_leader_main
+            .main.external_leader
             .port()
             .ok_or(anyhow!("Couldnt get port"))?;
 
@@ -317,12 +317,12 @@ pub async fn get_main_locations(
 ) -> Result<MainLocations>
 {
     let response_leader = reqwest::Client::new()
-        .get(tasks_servers.external_leader_tasks.join("/get_main_locations").unwrap())
+        .get(tasks_servers.external_leader.join("/get_main_locations").unwrap())
         .send()
         .await?;
 
     let response_helper = reqwest::Client::new()
-        .get(tasks_servers.external_helper_tasks.join("/get_main_locations").unwrap())
+        .get(tasks_servers.external_helper.join("/get_main_locations").unwrap())
         .send()
         .await?;
 
@@ -342,7 +342,7 @@ pub async fn get_main_locations(
             }
         },
         (res1, res2) => Err(anyhow!(
-            "Starting round not successful, results are: \n{res1:?}\n\n{res2:?}"
+            "Getting main locations not successful, results are: \n{res1:?}\n\n{res2:?}"
         )),
     }
 }

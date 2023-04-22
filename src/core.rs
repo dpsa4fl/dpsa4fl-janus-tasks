@@ -18,10 +18,8 @@ use url::Url;
 #[derive(Clone)]
 pub struct Locations
 {
-    pub external_leader_tasks: Url,
-    pub external_helper_tasks: Url,
-    pub external_leader_main: Url,
-    pub external_helper_main: Url,
+    pub main: MainLocations,
+    pub tasks: TasksLocations,
 }
 
 impl Locations
@@ -29,8 +27,8 @@ impl Locations
     pub fn get_external_aggregator_endpoints(&self) -> Vec<Url>
     {
         vec![
-            self.external_leader_main.clone(),
-            self.external_helper_main.clone(),
+            self.main.external_leader.clone(),
+            self.main.external_helper.clone(),
         ]
     }
 }
@@ -38,15 +36,15 @@ impl Locations
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TasksLocations
 {
-    pub external_leader_tasks: Url,
-    pub external_helper_tasks: Url,
+    pub external_leader: Url,
+    pub external_helper: Url,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MainLocations
 {
-    pub external_leader_main: Url,
-    pub external_helper_main: Url,
+    pub external_leader: Url,
+    pub external_helper: Url,
 }
 
 /////////////////////////////
